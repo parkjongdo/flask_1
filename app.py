@@ -5,6 +5,10 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from flask_cors import CORS
+
+app = Flask(__name__)
+CORS(app)  # 모든 도메인에서의 요청 허용
 
 app = Flask(__name__)
 
