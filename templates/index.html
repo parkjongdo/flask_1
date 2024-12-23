@@ -87,11 +87,14 @@
             nextPageButton.style.display = 'none';
 
             try {
-                const response = await fetch('https://port-0-flask-1-m4y428yj420e8672.sel4.cloudtype.app/api/search', {
+               const response = await fetch('https://port-0-flask-1-m4y428yj420e8672.sel4.cloudtype.app/api/search', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
                     body: JSON.stringify({ booking_number: bookingNumber })
                 });
+
 
                 const data = await response.json();
 
