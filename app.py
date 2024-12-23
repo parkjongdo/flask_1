@@ -1,5 +1,4 @@
 from flask import Flask, jsonify, request, render_template
-
 import time
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
@@ -13,11 +12,6 @@ app = Flask(__name__)
 def index():
     return render_template("index.html")
 
-@app.route("/qr-scanner")
-def qr_scanner():
-    """QR 코드 스캔 페이지"""
-    return render_template("qr-scanner.html")
-
 @app.route("/api/search", methods=["POST"])
 def api_search():
     try:
@@ -29,10 +23,10 @@ def api_search():
 
         # Selenium Chrome Driver 설정
         options = Options()
-        options.add_argument("user-data-dir=c:\\user_data\\wonnipicnic")
-        options.add_experimental_option("detach", True)
-        options.add_experimental_option("excludeSwitches", ["enable-logging"])
-
+        options.add_argument("--headless")
+        options.add_argument("--disable-gpu")
+        options.add_argument("--no-sandbox")
+        options.add_argument("--disable-dev-shm-usage")
         driver = webdriver.Chrome(options=options)
         driver.get("https://partner.booking.naver.com/bizes/685947/booking-list-view")
         wait = WebDriverWait(driver, 3)
@@ -59,15 +53,13 @@ def api_search():
         )).click()
         time.sleep(1)
 
-        # 조회 결과 확인
         summary_number_selector = "#app > div > div.BaseLayout__container__zPiGd.full-layout > div.Contents__root__KKNX7 > div > div.BookingList__summary-number__sJ7fW > strong"
         summary_number = get_element_text(wait, summary_number_selector, default_text="0")
 
         if summary_number != "1":
             driver.quit()
-            return jsonify({"error": booking_number + " 예약번호는 존재하지 않습니다."})
+            return jsonify({"error": f"{booking_number} 예약번호는 존재하지 않습니다."})
 
-        # 결과 수집
         예약자 = "#app > div > div.BaseLayout__container__zPiGd.full-layout > div.Contents__root__KKNX7 > div > div.Bookings__root__BUpvA > div > div > div > div.ListMobile__list-cont__ekGxB > div:nth-child(1) > span.ListMobile__item-dsc__IYSSh"
         전화번호 = "#app > div > div.BaseLayout__container__zPiGd.full-layout > div.Contents__root__KKNX7 > div > div.Bookings__root__BUpvA > div > div > div > div.ListMobile__list-cont__ekGxB > div:nth-child(2) > a"
         예약번호 = "#app > div > div.BaseLayout__container__zPiGd.full-layout > div.Contents__root__KKNX7 > div > div.Bookings__root__BUpvA > div > div > div > div.ListMobile__list-cont__ekGxB > div:nth-child(3) > span.ListMobile__item-dsc__IYSSh"
@@ -89,7 +81,6 @@ def api_search():
         return jsonify({"error": f"서버 오류 발생: {str(e)}"}), 500
 
 def get_element_text(wait, selector, default_text):
-    """Selenium 요소에서 텍스트 가져오기"""
     try:
         return wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, selector))).text
     except Exception:
