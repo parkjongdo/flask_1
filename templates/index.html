@@ -1,32 +1,127 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cloudtype - Flask</title>
-  <link href="https://cdn.jsdelivr.net/npm/daisyui@2.51.3/dist/full.css" rel="stylesheet" type="text/css" />
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2/dist/tailwind.min.css" rel="stylesheet" type="text/css" />
-  <link rel="shortcut icon" href="{{ url_for('static', filename='img/favicon.ico') }}">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>네이버 예약번호 검색</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        form {
+            margin-bottom: 20px;
+        }
+        ul {
+            list-style: none;
+            padding: 0;
+        }
+        li {
+            margin-bottom: 10px;
+        }
+        label {
+            font-weight: bold;
+        }
+        input, button {
+            margin-top: 10px;
+            padding: 8px 12px;
+            font-size: 1rem;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .results {
+            margin-top: 20px;
+        }
+        #loading {
+            display: none;
+            color: blue;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        #next-page-btn {
+            display: none; /* 기본적으로 숨김 */
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 1rem;
+            color: white;
+            background-color: #007BFF;
+            border: none;
+            cursor: pointer;
+        }
+        #next-page-btn:hover {
+            background-color: #0056b3;
+        }
+    </style>
 </head>
 <body>
-<div class="hero min-h-screen bg-base-200">
-  <div class="hero-content flex-col lg:flex-row-reverse">
-    <img src="{{ url_for('static', filename='img/flask.webp') }}" class="w-36 rounded-lg md:ml-5 lg:ml-5"  alt="flask"/>
-    <div>
-      <h1 class="text-5xl font-bold">Flask</h1>
-      <p class="py-6">클라우드타입에서 배포한 Flask 어플리케이션입니다.</p>
-      <button type="button" onclick="window.open('https://github.com/cloudtype-examples/java-springboot')" class="btn btn-outline rounded">
-        GitHub
-      </button>
-      <button type="button" onclick="window.open('https://docs.cloudtype.io/')" class="btn btn-outline rounded">
-        Docs
-      </button>
-      <button type="button" onclick="window.open('https://discord.gg/U7HX4BA6hu')" class="btn btn-outline rounded">
-        Discord
-      </button>
-    </div>
-  </div>
-</div>
+    <h1>네이버 예약번호로 예약 정보 검색</h1>
+    <form id="search-form">
+        <label for="booking_number">예약번호 입력:</label>
+        <input type="text" id="booking_number" name="booking_number" placeholder="예약번호를 입력하세요" required>
+        <button type="submit">검색</button>
+        <a href="https://m.place.naver.com/my/timeline?tab=RESERVATION"> 네이버 my예약에서 조회하기</a>
+    </form>
+
+    <p id="loading">로딩 중...</p>
+    <div class="results" id="results"></div>
+    <button id="next-page-btn">QR 코드 스캔 시작</button>
+
+    <script>
+        document.getElementById('search-form').addEventListener('submit', async function(event) {
+            event.preventDefault();
+
+            const bookingNumber = document.getElementById('booking_number').value.trim();
+            const resultsDiv = document.getElementById('results');
+            const loadingText = document.getElementById('loading');
+            const nextPageButton = document.getElementById('next-page-btn');
+
+            loadingText.style.display = 'block';
+            resultsDiv.innerHTML = '';
+            nextPageButton.style.display = 'none'; // 버튼 숨기기
+
+            try {
+                const response = await fetch('/api/search', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ booking_number: bookingNumber })
+                });
+
+                const data = await response.json();
+
+                if (data.error) {
+                    resultsDiv.innerHTML = `<p style="color:red;">${data.error}</p>`;
+                } else {
+                    resultsDiv.innerHTML = `
+                        <h2>검색 결과:</h2>
+                        <ul>
+                            ${Object.entries(data).map(([key, value]) => `<li><strong>${key}:</strong> ${value}</li>`).join('')}
+                        </ul>
+                    `;
+                    nextPageButton.style.display = 'inline-block'; // 버튼 활성화
+
+                }
+            } catch (error) {
+                resultsDiv.innerHTML = `<p style="color:red;">오류 발생: ${error.message}</p>`;
+            } finally {
+                loadingText.style.display = 'none';
+            }
+        });
+
+        document.getElementById('next-page-btn').addEventListener('click', function() {
+            const qrScannerWindow = window.open('/qr-scanner', 'QRScanner', 'width=400,height=500');
+            window.addEventListener('message', function(event) {
+                if (event.origin === window.location.origin) {
+                    document.getElementById('booking_number').value = event.data.qrCode;
+                }
+            });
+        });
+    </script>
 </body>
 </html>
