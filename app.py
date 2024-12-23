@@ -18,7 +18,6 @@ def index():
 
 @app.route("/api/search", methods=["POST"])
 def api_search():
-    return jsonify({"message": "엔드포인트 정상 동작 중"})
     try:
         # AJAX 요청 데이터 받기
         data = request.json
