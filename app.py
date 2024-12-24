@@ -13,17 +13,16 @@ from flask_cors import CORS
 logging.basicConfig(level=logging.DEBUG)
 
 app = Flask(__name__)
-CORS(app)
+CORS(app)  # 모든 도메인에서의 요청 허용
 
 @app.route("/")
 def index():
+    """Index Page"""
     return render_template("index.html")
 
 @app.route("/api/search", methods=["POST"])
 def api_search():
     try:
-        start_time = time.time()  # 시작 시간 측정
-
         # AJAX 요청 데이터 받기
         data = request.json
         booking_number = data.get("booking_number", "").strip()
@@ -39,17 +38,20 @@ def api_search():
         options.add_argument("--disable-extensions")
         options.add_argument("--disable-blink-features=AutomationControlled")
         options.binary_location = "/usr/bin/google-chrome"
+        driver = webdriver.Chrome(executable_path="/usr/bin/chromedriver", options=options)
 
-        driver = webdriver.Chrome(options=options)
-
-        # Selenium 반자동 탐지 방지
+        # Selenium anti-detection
         driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
-        time.sleep(random.uniform(1.5, 2.5))  # 랜덤 지연 시간
 
+        # 랜덤 지연 추가
+        time.sleep(random.uniform(1.5, 2.5))
+
+        logging.debug("Navigating to the Naver booking page.")
         driver.get("https://partner.booking.naver.com/bizes/685947/booking-list-view")
         wait = WebDriverWait(driver, 10)
 
         # 예약조회 버튼 클릭
+        logging.debug("Clicking the booking search button.")
         wait.until(
             EC.element_to_be_clickable(
                 (By.CSS_SELECTOR, "#app > div > div.BaseLayout__container__zPiGd.full-layout > div.Contents__root__KKNX7 > div > div.BookingFilter__root__S9XG7 > div.BookingFilter__search-input__3x1-d > form > div")
@@ -57,6 +59,7 @@ def api_search():
         ).click()
 
         # 예약번호조회 버튼 클릭
+        logging.debug("Clicking the booking number search button.")
         wait.until(
             EC.element_to_be_clickable(
                 (By.CSS_SELECTOR, "#app > div > div.BaseLayout__container__zPiGd.full-layout > div.Contents__root__KKNX7 > div > div.BookingFilter__root__S9XG7 > div.BookingFilter__search-input__3x1-d > form > div > div > a:nth-child(3)")
@@ -64,6 +67,7 @@ def api_search():
         ).click()
 
         # 입력 및 검색
+        logging.debug("Entering booking number and searching.")
         input_element = wait.until(
             EC.presence_of_element_located(
                 (By.CSS_SELECTOR, "#app > div > div.BaseLayout__container__zPiGd.full-layout > div.Contents__root__KKNX7 > div > div.BookingFilter__root__S9XG7 > div.BookingFilter__search-input__3x1-d > form > input")
@@ -71,6 +75,7 @@ def api_search():
         )
         input_element.clear()
         input_element.send_keys(booking_number)
+        time.sleep(random.uniform(0.5, 1.0))
 
         wait.until(
             EC.element_to_be_clickable(
@@ -79,14 +84,16 @@ def api_search():
         ).click()
 
         # 결과 확인
+        logging.debug("Checking search results.")
         summary_number_selector = "#app > div > div.BaseLayout__container__zPiGd.full-layout > div.Contents__root__KKNX7 > div > div.BookingList__summary-number__sJ7fW > strong"
         summary_number = get_element_text(wait, summary_number_selector, default_text="0")
 
         if summary_number != "1":
             driver.quit()
-            logging.info(f"{booking_number} 예약번호는 존재하지 않음")
+            logging.warning(f"Booking number {booking_number} does not exist.")
             return jsonify({"error": f"{booking_number} 예약번호는 존재하지 않습니다."})
 
+        # 결과 수집
         예약자 = "#app > div > div.BaseLayout__container__zPiGd.full-layout > div.Contents__root__KKNX7 > div > div.Bookings__root__BUpvA > div > div > div > div.ListMobile__list-cont__ekGxB > div:nth-child(1) > span.ListMobile__item-dsc__IYSSh"
         전화번호 = "#app > div > div.BaseLayout__container__zPiGd.full-layout > div.Contents__root__KKNX7 > div > div.Bookings__root__BUpvA > div > div > div > div.ListMobile__list-cont__ekGxB > div:nth-child(2) > a"
         예약번호 = "#app > div > div.BaseLayout__container__zPiGd.full-layout > div.Contents__root__KKNX7 > div > div.Bookings__root__BUpvA > div > div > div > div.ListMobile__list-cont__ekGxB > div:nth-child(3) > span.ListMobile__item-dsc__IYSSh"
@@ -98,15 +105,14 @@ def api_search():
             "전화번호": get_element_text(wait, 전화번호, "전화번호 정보가 없습니다."),
             "예약번호": get_element_text(wait, 예약번호, "예약번호 정보가 없습니다."),
             "예약상품": get_element_text(wait, 예약상품, "예약 상품 정보가 없습니다."),
-            "이용일시": get_element_text(wait, 이용일시, "이용 일시 정보가 없습니다."),
+            "이용일시": get_element_text(wait, 이용일시, "이용 일시 정보가 없습니다.")
         }
 
         driver.quit()
-        logging.info(f"작업 완료 시간: {time.time() - start_time}초")
         return jsonify(results)
 
     except Exception as e:
-        logging.error(f"서버 오류: {str(e)}")
+        logging.error(f"Server error: {str(e)}")
         return jsonify({"error": f"서버 오류 발생: {str(e)}"}), 500
 
 def get_element_text(wait, selector, default_text):
