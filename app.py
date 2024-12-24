@@ -28,7 +28,7 @@ def api_search():
         if not booking_number:
             return jsonify({"error": "예약번호를 입력하세요."}), 400
 
-        # Selenium Chrome Driver 설정 (최적화 적용)
+        # Selenium Chrome Driver 설정
         options = Options()
         options.add_argument("--headless")
         options.add_argument("--disable-gpu")
@@ -36,10 +36,10 @@ def api_search():
         options.add_argument("--disable-dev-shm-usage")
         options.add_argument("--disable-extensions")
         options.add_argument("--disable-blink-features=AutomationControlled")
+        options.binary_location = "/usr/bin/google-chrome"
         driver = webdriver.Chrome(options=options)
-        driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
 
-        # 지연 시간 추가
+        driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
         time.sleep(random.uniform(1.5, 2.5))
 
         driver.get("https://partner.booking.naver.com/bizes/685947/booking-list-view")
@@ -82,7 +82,6 @@ def api_search():
             driver.quit()
             return jsonify({"error": f"{booking_number} 예약번호는 존재하지 않습니다."})
 
-        # 결과 수집
         results = {
             "예약자": get_element_text(wait, 예약자, "예약자 정보가 없습니다."),
             "전화번호": get_element_text(wait, 전화번호, "전화번호 정보가 없습니다."),
@@ -98,13 +97,11 @@ def api_search():
         logging.error(f"서버 오류: {str(e)}")
         return jsonify({"error": f"서버 오류 발생: {str(e)}"}), 500
 
-
 def get_element_text(wait, selector, default_text):
     try:
         return wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, selector))).text
     except Exception:
         return default_text
-
 
 if __name__ == "__main__":
     app.run(debug=True)
