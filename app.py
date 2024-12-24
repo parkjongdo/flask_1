@@ -1,15 +1,13 @@
 from flask import Flask, jsonify, request, render_template
 import time
-start_time = time.time()
-# 작업
-print(f"작업 시간: {time.time() - start_time}초")import random
+import random
+import logging
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from flask_cors import CORS
-import logging
 
 # 로깅 설정
 logging.basicConfig(level=logging.DEBUG)
@@ -24,6 +22,8 @@ def index():
 @app.route("/api/search", methods=["POST"])
 def api_search():
     try:
+        start_time = time.time()  # 시작 시간 측정
+
         # AJAX 요청 데이터 받기
         data = request.json
         booking_number = data.get("booking_number", "").strip()
@@ -39,10 +39,12 @@ def api_search():
         options.add_argument("--disable-extensions")
         options.add_argument("--disable-blink-features=AutomationControlled")
         options.binary_location = "/usr/bin/google-chrome"
+
         driver = webdriver.Chrome(options=options)
 
+        # Selenium 반자동 탐지 방지
         driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
-        time.sleep(random.uniform(1.5, 2.5))
+        time.sleep(random.uniform(1.5, 2.5))  # 랜덤 지연 시간
 
         driver.get("https://partner.booking.naver.com/bizes/685947/booking-list-view")
         wait = WebDriverWait(driver, 10)
@@ -82,17 +84,25 @@ def api_search():
 
         if summary_number != "1":
             driver.quit()
+            logging.info(f"{booking_number} 예약번호는 존재하지 않음")
             return jsonify({"error": f"{booking_number} 예약번호는 존재하지 않습니다."})
+
+        예약자 = "#app > div > div.BaseLayout__container__zPiGd.full-layout > div.Contents__root__KKNX7 > div > div.Bookings__root__BUpvA > div > div > div > div.ListMobile__list-cont__ekGxB > div:nth-child(1) > span.ListMobile__item-dsc__IYSSh"
+        전화번호 = "#app > div > div.BaseLayout__container__zPiGd.full-layout > div.Contents__root__KKNX7 > div > div.Bookings__root__BUpvA > div > div > div > div.ListMobile__list-cont__ekGxB > div:nth-child(2) > a"
+        예약번호 = "#app > div > div.BaseLayout__container__zPiGd.full-layout > div.Contents__root__KKNX7 > div > div.Bookings__root__BUpvA > div > div > div > div.ListMobile__list-cont__ekGxB > div:nth-child(3) > span.ListMobile__item-dsc__IYSSh"
+        예약상품 = "#app > div > div.BaseLayout__container__zPiGd.full-layout > div.Contents__root__KKNX7 > div > div.Bookings__root__BUpvA > div > div > div > div.ListMobile__list-cont__ekGxB > div.SummaryMobile__root__Jq2JY > div.SummaryMobile__root__Jq2JY > div:nth-child(1) > span.SummaryMobile__item-dsc__kPUHV.SummaryMobile__text-info__Reb7m"
+        이용일시 = "#app > div > div.BaseLayout__container__zPiGd.full-layout > div.Contents__root__KKNX7 > div > div.Bookings__root__BUpvA > div > div > div > div.ListMobile__list-cont__ekGxB > div.SummaryMobile__root__Jq2JY > div.SummaryMobile__root__Jq2JY > div:nth-child(2) > span.SummaryMobile__item-dsc__kPUHV.text-info.SummaryMobile__item-dsc-vertical__pF1iQ"
 
         results = {
             "예약자": get_element_text(wait, 예약자, "예약자 정보가 없습니다."),
             "전화번호": get_element_text(wait, 전화번호, "전화번호 정보가 없습니다."),
             "예약번호": get_element_text(wait, 예약번호, "예약번호 정보가 없습니다."),
             "예약상품": get_element_text(wait, 예약상품, "예약 상품 정보가 없습니다."),
-            "이용일시": get_element_text(wait, 이용일시, "이용 일시 정보가 없습니다.")
+            "이용일시": get_element_text(wait, 이용일시, "이용 일시 정보가 없습니다."),
         }
 
         driver.quit()
+        logging.info(f"작업 완료 시간: {time.time() - start_time}초")
         return jsonify(results)
 
     except Exception as e:
