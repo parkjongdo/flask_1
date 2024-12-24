@@ -1,5 +1,6 @@
 from flask import Flask, jsonify, request, render_template
 import time
+import random
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
@@ -9,8 +10,6 @@ from flask_cors import CORS
 
 app = Flask(__name__)
 CORS(app)  # 모든 도메인에서의 요청 허용
-
-app = Flask(__name__)
 
 @app.route("/")
 def index():
@@ -32,8 +31,12 @@ def api_search():
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
         driver = webdriver.Chrome(options=options)
+        
+        # 지연시간 추가 (랜덤)
+        time.sleep(random.uniform(1.5, 3.0))
+        
         driver.get("https://partner.booking.naver.com/bizes/685947/booking-list-view")
-        wait = WebDriverWait(driver, 3)
+        wait = WebDriverWait(driver, 10)  # 적절한 대기시간 설정
 
         # 예약조회 버튼 클릭
         wait.until(EC.element_to_be_clickable(
@@ -51,11 +54,13 @@ def api_search():
         ))
         input_element.clear()
         input_element.send_keys(booking_number)
-        time.sleep(1)
+        time.sleep(random.uniform(0.5, 1.5))  # 또 다른 랜덤 지연 추가
+        
         wait.until(EC.element_to_be_clickable(
             (By.CSS_SELECTOR, "#app > div > div.BaseLayout__container__zPiGd.full-layout > div.Contents__root__KKNX7 > div > div.BookingFilter__root__S9XG7 > div.BookingFilter__search-input__3x1-d > form > button")
         )).click()
-        time.sleep(1)
+
+        time.sleep(random.uniform(1, 2))  # 요청 후 기다림
 
         summary_number_selector = "#app > div > div.BaseLayout__container__zPiGd.full-layout > div.Contents__root__KKNX7 > div > div.BookingList__summary-number__sJ7fW > strong"
         summary_number = get_element_text(wait, summary_number_selector, default_text="0")
