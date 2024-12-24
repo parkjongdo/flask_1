@@ -1,6 +1,8 @@
 from flask import Flask, jsonify, request, render_template
 import time
-import random
+start_time = time.time()
+# 작업
+print(f"작업 시간: {time.time() - start_time}초")import random
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
